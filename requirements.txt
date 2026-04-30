@@ -2,3 +2,7 @@ paramiko
 netmiko
 nornir
 napalm
+snmp
+scapy
+pyreadline3
+

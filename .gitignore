@@ -1,4 +1,19 @@
-# gitignore Files:
+# gitignore File:
+# Cisco Repository
 
 desktop.ini
+
 __pychache__/
+build/
+venv/
+dist/
+.vscode/
+.idea/
+
+*.log
+*.pyc
+
+.env
+
+
+
