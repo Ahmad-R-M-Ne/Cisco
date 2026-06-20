@@ -1,8 +1,74 @@
+# Python Requirements Packages
+# SSH / CLI automation
 paramiko
 netmiko
+scrapli
+scrapli-community
+telnetlib3
+telnetlib-313-and-up
+
+# Network automation frameworks
 nornir
+nornir-netmiko
+nornir-scrapli
+nornir-napalm
 napalm
-snmp
+pyats[full]
+
+# SNMP / monitoring / APIs
+pysnmp
+requests
+httpx
+urllib3
+
+# NETCONF / RESTCONF / YANG
+ncclient
+xmltodict
+lxml
+pyang
+
+# Packet crafting / packet analysis
 scapy
+scapy-cdp
+dpkt
+
+# Data parsing and templates
+textfsm
+ntc-templates
+ttp
+jmespath
+PyYAML
+jinja2
+
+# Excel / CSV / reports
+openpyxl
+xlsxwriter
+tabulate
+rich
+colorama
+
+# Web automation / dashboards / APIs
+selenium
+flask
+django
+fastapi
+uvicorn
+
+# Diagrams / visualization
+matplotlib
+pygal
+graphviz
+networkx
+
+# Windows terminal support
 pyreadline3
+
+# Environment / config
+python-dotenv
+pydantic
+
+# Testing / code quality
+pytest
+black
+ruff
 
