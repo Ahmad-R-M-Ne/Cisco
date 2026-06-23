@@ -1,21 +1,22 @@
 ###############################################################################
-#                        IPv4/ACL Convertor Script V2.0                       #
+#                        IPv4/ACL Convertor Script V3.0                       #
 ###############################################################################
-#  Job: This script will convert ACL list to IPv4 Address and vice versa      #
-#       base on user input (option 1 & 2)                                     #
-#       - IP Validation and Sorting Output files Added to this Version        #
+#  Job: This script will convert IPv4 address list to ACL list and vice versa #
+#       base on the user input (option 1, 2 and 3)                            #
+#       - Prefix cleanup and Redundant subnet removal Added to this Version   #
 # Author: Ahmad Mojahed (NOC)                                                 #
-# Date: 2026-06-22                                                            #
+# Date: 2026-06-23                                                            #
 ###############################################################################
 
-from netaddr import IPNetwork, IPAddress, AddrFormatError
+from netaddr import IPNetwork, IPAddress, AddrFormatError, cidr_merge
 
 # ------------------ File Names ------------------------------------------------
 ACL_FILE = "IPV4-ACL.txt"                                  # Input ACL List file in Option 1
-IP_LIST_FILE = "IPV4-LIST.txt"                             # Input IPv4 List file in Option 2
+IP_LIST_FILE = "IPV4-LIST.txt"                             # Input IPv4 List file in Option 2 and 3
 ACL_SEND_FILE = "IPV4-ACL-SEND.txt"                        # Output IPv4 Access List Outbound command in Option 2 
 ACL_RECEIVE_FILE = "IPV4-ACL-RECEIVE.txt"                  # Output IPv4 Access List Inbound command in Option 2
 IP_LIST_OUTPUT_FILE = "IPV4-LIST-CONVERTED.txt"            # Output IPv4 List file in Option 1
+IP_LIST_OPTIMIZED_FILE = "IPV4-LIST-OPTIMIZED.txt"         # Output IPv4 List file in Option 3
 
 # ------------------ Validate Wildcard and Convert to Prefix -------------------
 def wildcard_to_prefix(wildcard):
@@ -130,7 +131,7 @@ def acl_to_ipv4_list():
     except Exception as error:
         print(f"Unexpected error: {error}")
 
-# ------------------ Task 2: ACL to IPv4 List ----------------------------------
+# ------------------ Task 1: IPv4 List to ACL ----------------------------------
 def ipv4_list_to_acl():
     """
     Read IPV4-LIST.txt and create:
@@ -183,12 +184,62 @@ def ipv4_list_to_acl():
     except Exception as error:
         print(f"Unexpected error: {error}")
 
+# ------------------ Task 3: Optimize IPv4 List --------------------------------
+def optimize_ipv4_list():
+    """
+    Read IPV4-LIST.txt
+    Remove unnecessary subnets
+    Merge possible adjacent networks
+    Create IPV4-LIST-OPTIMIZED.txt
+    """
+    networks = []
+
+    try:
+        with open(IP_LIST_FILE, "r") as input_file:
+
+            for line in input_file:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                try:
+                    network = IPNetwork(line)
+
+                    # Accept IPv4 only
+                    if network.version != 4:
+                        raise ValueError
+
+                    networks.append(network)
+
+                except Exception:
+                    print(f"Skipped wrong line: {line}")
+
+        # Remove redundant subnets and merge adjacent ranges
+        optimized_networks = cidr_merge(networks)
+
+        # Sort optimized networks
+        optimized_networks.sort()
+
+        with open(IP_LIST_OPTIMIZED_FILE, "w") as output_file:
+            for network in optimized_networks:
+                output_file.write(f"{network}\n")
+
+        print("Task Completed Successfully!")
+
+    except FileNotFoundError:
+        print(f"Error: File not found: {IP_LIST_FILE}")
+
+    except Exception as error:
+        print(f"Unexpected error: {error}")
+
 # ------------------ Main Menu -------------------------------------------------
 def main():
     print("***** ACL/IPv4 Convertor *****")
     print("Choose the Process")
     print("1- ACL to IPv4 List")
     print("2- IPv4 List to ACL")
+    print("3- Optimize IPv4 List")
 
     process = input("Enter your Process(1 or 2): ").strip()
 
@@ -197,9 +248,12 @@ def main():
 
     elif process == "2":
         ipv4_list_to_acl()
+        
+    elif process == "3":
+        optimize_ipv4_list()
 
     else:
-        print("Invalid choice. Please enter 1 or 2.")
+        print("Invalid choice. Please enter 1, 2 or 3.")
 
 
 # ------------------ Start Script ----------------------------------------------
