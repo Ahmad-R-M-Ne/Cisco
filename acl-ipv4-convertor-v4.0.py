@@ -1,20 +1,23 @@
 ###############################################################################
-#                        IPv4/ACL Convertor Script V3.0                       #
+#                        IPv4/ACL Convertor Script V4.0                       #
 ###############################################################################
 #  Job: This script will convert IPv4 address list to ACL list and vice versa #
-#       base on the user input (option 1, 2 and 3)                            #
-#       - Prefix cleanup and Redundant subnet removal Added to this Version   #
+#       base on the user input (option 1, 2, 3 and 4)                         #
+#       - Push ACL Lines to a Cisco Router using Netmiko Library Added to     #
+#         this Version.                                                       #
 # Author: Ahmad Mojahed (NOC)                                                 #
-# Date: 2026-06-23                                                            #
+# Date: 2026-06-28                                                            #
 ###############################################################################
 
 from netaddr import IPNetwork, IPAddress, AddrFormatError, cidr_merge
+from netmiko import ConnectHandler
 
 # ------------------ File Names ------------------------------------------------
 ACL_FILE = "IPV4-ACL.txt"                                  # Input ACL List file in Option 1
 IP_LIST_FILE = "IPV4-LIST.txt"                             # Input IPv4 List file in Option 2 and 3
 ACL_SEND_FILE = "IPV4-ACL-SEND.txt"                        # Output IPv4 Access List Outbound command in Option 2 
 ACL_RECEIVE_FILE = "IPV4-ACL-RECEIVE.txt"                  # Output IPv4 Access List Inbound command in Option 2
+ACL_LINES_FILE = "IPV4-ACL-NEW-LINES.txt"                  # Input ACL Lines in Option 4
 IP_LIST_OUTPUT_FILE = "IPV4-LIST-CONVERTED.txt"            # Output IPv4 List file in Option 1
 IP_LIST_OPTIMIZED_FILE = "IPV4-LIST-OPTIMIZED.txt"         # Output IPv4 List file in Option 3
 
@@ -233,6 +236,91 @@ def optimize_ipv4_list():
     except Exception as error:
         print(f"Unexpected error: {error}")
 
+# ---------- Task 4: Push ACL Lines to Cisco IOS XE ----------
+def push_acl_to_cisco():
+    """
+    Read ACL lines from IPV4-ACL-NEW-LINES.txt
+    SSH to Cisco IOS XE router
+    Remove deny ip any any
+    Add new ACL lines
+    Add deny ip any any again at the bottom
+    Save configuration
+    """
+
+    acl_lines = []
+
+    try:
+        # Read ACL lines from file
+        with open(ACL_LINES_FILE, "r") as input_file:
+            for line in input_file:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                # Very simple validation
+                if line.startswith("permit ip") or line.startswith("deny ip"):
+                    acl_lines.append(line)
+                else:
+                    print(f"Skipped wrong ACL line: {line}")
+
+        if not acl_lines:
+            print("No valid ACL lines found.")
+            return
+
+        # Ask user for device information
+        dnsname = input("Enter Router DNS/IP: ").strip()
+        username = input("Enter Username: ").strip()
+        password = input("Enter Password: ").strip()
+        acl_name = input("Enter ACL Name: ").strip()
+
+        # Cisco IOS XE device information
+        device = {
+            "device_type": "cisco_ios",
+            "host": dnsname,
+            "username": username,
+            "password": password,
+            "secret": password,
+        }
+
+        print("Connecting to device...")
+
+        connection = ConnectHandler(**device)
+        connection.enable()
+
+        print("Connected successfully.")
+        print("Sending ACL commands...")
+
+        # Build configuration commands
+        commands = [
+            f"ip access-list extended {acl_name}",
+            "no deny ip any any",
+        ]
+
+        # Add new ACL lines
+        commands.extend(acl_lines)
+
+        # Add deny any any again at the bottom
+        commands.append("deny ip any any")
+
+        # Push commands to router
+        output = connection.send_config_set(commands)
+
+        # Save configuration
+        save_output = connection.save_config()
+
+        connection.disconnect()
+
+        print(output)
+        print(save_output)
+        print("Task Completed Successfully!")
+
+    except FileNotFoundError:
+        print(f"Error: File not found: {ACL_LINES_FILE}")
+
+    except Exception as error:
+        print(f"Unexpected error: {error}")
+        
 # ------------------ Main Menu -------------------------------------------------
 def main():
     print("***** ACL/IPv4 Convertor *****")
@@ -240,6 +328,7 @@ def main():
     print("1- ACL to IPv4 List")
     print("2- IPv4 List to ACL")
     print("3- Optimize IPv4 List")
+    print("4- Push ACL Lines to Cisco Router")
 
     process = input("Enter your Process(1 or 2): ").strip()
 
@@ -251,9 +340,12 @@ def main():
         
     elif process == "3":
         optimize_ipv4_list()
+    
+    elif process == "4":
+        push_acl_to_cisco()
 
     else:
-        print("Invalid choice. Please enter 1, 2 or 3.")
+        print("Invalid choice. Please enter 1, 2, 3 or 4.")
 
 
 # ------------------ Start Script ----------------------------------------------
